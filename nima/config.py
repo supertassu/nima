@@ -38,6 +38,9 @@ class ConfigFile:
         self.path = file
 
     def save(self):
+        if not os.path.exists(os.path.dirname(self.path)):
+            os.mkdir(os.path.dirname(self.path))
+
         with open(self.path, "w") as file:
             file.write(yaml.dump(self.config))
 
