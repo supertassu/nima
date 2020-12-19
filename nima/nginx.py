@@ -66,6 +66,9 @@ class Site:
             phpfpm="unix:/var/run/php/php7.3-fpm.sock",  # TODO: from config
         )
 
+        if not os.path.exists(os.path.dirname(file)):
+            os.mkdir(os.path.dirname(file))
+
         with open(file, "w", encoding="utf-8") as f:
             f.write(content)
         restart_nginx()
