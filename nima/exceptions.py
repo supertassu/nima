@@ -7,4 +7,6 @@ class NimaException(Exception):
 
 class NotAProjectDirectory(NimaException, ClickException):
     def __init__(self, directory):
-        super(NotAProjectDirectory, self).__init__("Directory {} is not managed by Nima".format(directory))
+        super(NotAProjectDirectory, self).__init__(
+            "Directory {} is not managed by Nima".format(directory)
+        )
