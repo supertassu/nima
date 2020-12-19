@@ -80,6 +80,7 @@ def cmd_addalias(ctx, domain, project_path, raw):
     if not raw:
         domain += "." + conf.get("basedomain")
     site.add_alias(domain)
+    site.save()
 
     project_config[full_path] = site.to_dict()
     conf.set("projects", project_config)
@@ -109,6 +110,7 @@ def cmd_deletealias(ctx, domain, project_path, raw):
     if not raw:
         domain += "." + conf.get("basedomain")
     site.remove_alias(domain)
+    site.save()
 
     project_config[full_path] = site.to_dict()
     conf.set("projects", project_config)
