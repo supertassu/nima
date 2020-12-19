@@ -2,7 +2,6 @@ import os
 import os.path
 from subprocess import call
 from jinja2 import Template
-from nima.exceptions import CantAccessFile
 
 config_base_path = "/etc/nginx/sites-enabled"
 
@@ -44,7 +43,12 @@ class Site:
         return self.file
 
     def add_alias(self, alias: str):
+        if alias in self.aliases:
+            return
         self.aliases.append(alias)
+
+    def remove_alias(self, alias: str):
+        self.aliases.remove(alias)
 
     def save(self):
         webroot = self.get_webroot()
@@ -59,12 +63,13 @@ class Site:
             phpfpm='unix:/var/run/php/php7.3-fpm.sock',  # TODO: from config
         )
 
-        if not os.access(file, os.W_OK):
-            # raise CantAccessFile(file)
-            pass
-
         with open(file, 'w', encoding='utf-8') as f:
             f.write(content)
+        restart_nginx()
+
+    def delete(self):
+        print("would delete", self.get_file())
+        # os.remove(self.get_file())
         restart_nginx()
 
     def to_dict(self) -> dict:
