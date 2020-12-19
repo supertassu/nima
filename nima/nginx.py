@@ -2,6 +2,7 @@ import os
 import os.path
 from subprocess import call
 from jinja2 import Template
+from nima.exceptions import NimaException
 
 config_base_path = "/etc/nginx/sites-enabled"
 
@@ -68,8 +69,13 @@ class Site:
         restart_nginx()
 
     def delete(self):
-        print("would delete", self.get_file())
-        # os.remove(self.get_file())
+        file = self.get_file()
+        with open(file, 'r', encoding='utf-8') as f:
+            first = f.readline()
+            if first != "# Managed by Nima\n":
+                raise NimaException("File doesn't seem to be managed by this script")
+
+        os.remove(file)
         restart_nginx()
 
     def to_dict(self) -> dict:

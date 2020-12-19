@@ -1,6 +1,6 @@
 import click
 import os.path
-from nima import config, nginx
+from nima import config, nginx, exceptions
 
 
 @click.group()
@@ -60,8 +60,10 @@ def cmd_addalias(ctx, domain, project_path, raw):
     """Add the specified domain as an alias for the specified project path"""
     conf: config.ConfigFile = ctx.obj['config']
     project_config = conf.get('projects')
-
     full_path = os.path.realpath(os.path.expanduser(project_path))
+
+    if full_path not in project_config:
+        raise exceptions.NotAProjectDirectory(full_path)
     site: nginx.Site = nginx.from_dict(full_path, project_config[full_path])
 
     if not raw:
@@ -82,8 +84,10 @@ def cmd_deletealias(ctx, domain, project_path, raw):
     """Delete the specified domain as an alias for the specified project path"""
     conf: config.ConfigFile = ctx.obj['config']
     project_config = conf.get('projects')
-
     full_path = os.path.realpath(os.path.expanduser(project_path))
+
+    if full_path not in project_config:
+        raise exceptions.NotAProjectDirectory(full_path)
     site: nginx.Site = nginx.from_dict(full_path, project_config[full_path])
 
     if not raw:
@@ -103,6 +107,9 @@ def cmd_delete(ctx, project_path):
     conf: config.ConfigFile = ctx.obj['config']
     project_config = conf.get('projects')
     full_path = os.path.realpath(os.path.expanduser(project_path))
+
+    if full_path not in project_config:
+        raise exceptions.NotAProjectDirectory(full_path)
 
     site: nginx.Site = nginx.from_dict(full_path, project_config[full_path])
     site.delete()
