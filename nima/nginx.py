@@ -2,7 +2,7 @@ import os
 import os.path
 from subprocess import call
 from jinja2 import Template
-from nima.exceptions import NimaException
+from nima.exceptions import NimaException, NotAProjectDirectory
 
 config_base_path = "/etc/nginx/sites-enabled"
 
@@ -12,7 +12,8 @@ def restart_nginx():
 
 
 class Site:
-    def __init__(self, directory: str):
+    def __init__(self, directory: str, config):
+        self.config = config
         self.directory = directory
         self.webroot = None
         self.file = None
@@ -51,6 +52,20 @@ class Site:
     def remove_alias(self, alias: str):
         self.aliases.remove(alias)
 
+    def save_to_config(self):
+        project_config = self.config.get("projects")
+        project_config[self.directory] = self.to_dict()
+        self.config.set("projects", project_config)
+        self.config.save()
+
+    def ensure_managed(self):
+        with open(self.get_file(), "r", encoding="utf-8") as f:
+            first = f.readline()
+            if first != "# Managed by Nima\n":
+                raise NimaException(
+                    "That site doesn't seem to be managed by this script"
+                )
+
     def save(self):
         webroot = self.get_webroot()
         file = self.get_file()
@@ -69,19 +84,20 @@ class Site:
         if not os.path.exists(os.path.dirname(file)):
             os.mkdir(os.path.dirname(file))
 
+        if os.path.exists(file):
+            self.ensure_managed()
+
         with open(file, "w", encoding="utf-8") as f:
             f.write(content)
         restart_nginx()
+        self.save_to_config()
 
     def delete(self):
-        file = self.get_file()
-        with open(file, "r", encoding="utf-8") as f:
-            first = f.readline()
-            if first != "# Managed by Nima\n":
-                raise NimaException("File doesn't seem to be managed by this script")
+        self.ensure_managed()
 
-        os.remove(file)
+        os.remove(self.get_file())
         restart_nginx()
+        self.save_to_config()
 
     def to_dict(self) -> dict:
         return {
@@ -91,8 +107,14 @@ class Site:
         }
 
 
-def from_dict(directory: str, data: dict) -> Site:
-    site = Site(directory)
+def from_config(full_path: str, config) -> Site:
+    project_config = config.get("projects")
+    if full_path not in project_config:
+        raise NotAProjectDirectory(full_path)
+
+    site = Site(full_path, config)
+    data = project_config[full_path]
+
     if "aliases" in data:
         for alias in data["aliases"]:
             site.add_alias(alias)

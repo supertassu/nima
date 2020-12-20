@@ -22,11 +22,12 @@ def cmd_config(ctx):
 @click.pass_context
 def cmd_list(ctx):
     """List currently installed projects"""
-    for project in ctx.obj["config"].get("projects"):
-        site: nginx.Site = nginx.from_dict(
-            project, ctx.obj["config"].get("projects")[project]
-        )
-        click.echo(project + ": \n  " + "\n  ".join(site.aliases))
+    config: config.ConfigFile = ctx.obj["config"]
+    sites = config.get("projects")
+
+    for site_name in sites:
+        site: nginx.Site = config.get_site(site_name)
+        click.echo(site_name + ": \n  " + "\n  ".join(site.aliases))
 
 
 @cli.command("add")
@@ -36,7 +37,7 @@ def cmd_list(ctx):
     "-w",
     "--wildcard",
     is_flag=True,
-    help="If specified, also add a wildcard for subdomains of the default " "domain",
+    help="If specified, also add a wildcard for subdomains of the default domain",
 )
 def cmd_add(ctx, project_path, wildcard):
     """Create a site for the specified directory"""
@@ -45,16 +46,11 @@ def cmd_add(ctx, project_path, wildcard):
 
     domain_name = os.path.split(full_path)[-1] + "." + conf.get("basedomain")
 
-    site = nginx.Site(full_path)
+    site = nginx.Site(full_path, conf)
     site.add_alias(domain_name)
     if wildcard:
         site.add_alias("*." + domain_name)
     site.save()
-
-    project_config = conf.get("projects")
-    project_config[full_path] = site.to_dict()
-    conf.set("projects", project_config)
-    conf.save()
 
 
 @cli.command("addalias")
@@ -70,21 +66,13 @@ def cmd_add(ctx, project_path, wildcard):
 def cmd_addalias(ctx, domain, project_path, raw):
     """Add the specified domain as an alias for the specified project path"""
     conf: config.ConfigFile = ctx.obj["config"]
-    project_config = conf.get("projects")
     full_path = os.path.realpath(os.path.expanduser(project_path))
-
-    if full_path not in project_config:
-        raise exceptions.NotAProjectDirectory(full_path)
-    site: nginx.Site = nginx.from_dict(full_path, project_config[full_path])
+    site: nginx.Site = conf.get_site(full_path)
 
     if not raw:
         domain += "." + conf.get("basedomain")
     site.add_alias(domain)
     site.save()
-
-    project_config[full_path] = site.to_dict()
-    conf.set("projects", project_config)
-    conf.save()
 
 
 @cli.command("deletealias")
@@ -100,21 +88,13 @@ def cmd_addalias(ctx, domain, project_path, raw):
 def cmd_deletealias(ctx, domain, project_path, raw):
     """Delete the specified domain as an alias for the specified project path"""
     conf: config.ConfigFile = ctx.obj["config"]
-    project_config = conf.get("projects")
     full_path = os.path.realpath(os.path.expanduser(project_path))
-
-    if full_path not in project_config:
-        raise exceptions.NotAProjectDirectory(full_path)
-    site: nginx.Site = nginx.from_dict(full_path, project_config[full_path])
+    site: nginx.Site = conf.get_site(full_path)
 
     if not raw:
         domain += "." + conf.get("basedomain")
     site.remove_alias(domain)
     site.save()
-
-    project_config[full_path] = site.to_dict()
-    conf.set("projects", project_config)
-    conf.save()
 
 
 @cli.command("delete")
@@ -123,15 +103,7 @@ def cmd_deletealias(ctx, domain, project_path, raw):
 def cmd_delete(ctx, project_path):
     """Delete site for the specified directory"""
     conf: config.ConfigFile = ctx.obj["config"]
-    project_config = conf.get("projects")
     full_path = os.path.realpath(os.path.expanduser(project_path))
+    site: nginx.Site = conf.get_site(full_path)
 
-    if full_path not in project_config:
-        raise exceptions.NotAProjectDirectory(full_path)
-
-    site: nginx.Site = nginx.from_dict(full_path, project_config[full_path])
     site.delete()
-
-    del project_config[full_path]
-    conf.set("projects", project_config)
-    conf.save()

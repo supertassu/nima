@@ -1,5 +1,6 @@
 import yaml
 import os.path
+from nima.nginx import Site, from_config
 
 
 def get_path():
@@ -15,6 +16,12 @@ def get_path():
     return os.path.expanduser("/etc/nima/config.yaml")
 
 
+class Option:
+    def __init__(self, name, default=None):
+        self.name = name
+        self.default = default
+
+
 class ConfigFile:
     def __init__(self):
         file = get_path()
@@ -22,7 +29,7 @@ class ConfigFile:
             config = yaml.safe_load(open(file))
             if config is None:
                 raise IOError  # to trigger except block
-        except IOError:
+        except IOError:  # it is ok if we have no config file
             # it is ok if we have no config file
             config = {}
 
@@ -49,3 +56,6 @@ class ConfigFile:
 
     def set(self, key, value):
         self.config[key] = value
+
+    def get_site(self, full_path) -> Site:
+        return from_config(full_path, self)
