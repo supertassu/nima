@@ -4,8 +4,6 @@ from subprocess import call
 from jinja2 import Template
 from nima.exceptions import NimaException, NotAProjectDirectory
 
-config_base_path = "/etc/nginx/sites-enabled"
-
 
 def restart_nginx():
     call(["systemctl", "restart", "nginx"])
@@ -41,7 +39,9 @@ class Site:
         if self.file is None:
             if len(self.aliases) == 0:
                 raise
-            self.file = os.path.join(config_base_path, self.aliases[0] + ".conf")
+            self.file = os.path.join(
+                self.config.get("nginx_sites_base_path"), self.aliases[0] + ".conf"
+            )
         return self.file
 
     def add_alias(self, alias: str):
@@ -78,7 +78,7 @@ class Site:
         content = template.render(
             names=" ".join(self.aliases),
             root=webroot,
-            phpfpm="unix:/var/run/php/php7.3-fpm.sock",  # TODO: from config
+            phpfpm=self.config.get("phpfpm"),
         )
 
         if not os.path.exists(os.path.dirname(file)):

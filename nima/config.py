@@ -37,6 +37,8 @@ class ConfigFile:
             config["projects"] = {}
         if "basedomain" not in config:
             config["basedomain"] = "test"
+        if "nginx_sites_base_path" not in config:
+            config["nginx_sites_base_path"] = "/etc/nginx/sites-enabled"
         if "phpfpm" not in config:
             # TODO: check which one
             config["phpfpm"] = "unix:/var/run/php/php7.3-fpm.sock"
